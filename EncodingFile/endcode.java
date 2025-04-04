@@ -13,7 +13,7 @@ import java.util.Map;
 public class endcode {
 
     // String encode <length>:<string>
-    // integer encode i:<integer>
+    // integer encode i:<integer>e
     // List encode l:<item1>...<itemN>e
     // Map<String,Object> encode d:<key1>:<value1>...<keyN>:<valueN>e
     // byte[] encode <length>:<data>
