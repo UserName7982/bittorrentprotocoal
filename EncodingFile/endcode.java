@@ -1,14 +1,15 @@
 package EncodingFile;
 
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import DecodingFile.decode;
 
 public class endcode {
 
@@ -51,39 +52,42 @@ public class endcode {
 
     /**
      * Encodes the given Map into a byte array. The encoding scheme is as follows:
-     *  - The type byte 'd' is written to the output stream
-     *  - The keys of the map are sorted and for each key, the key and its value
-     *    are encoded (using this class's encode method) and written to the output
-     *    stream
-     *  - The type byte 'e' is written to the output stream
+     * - The type byte 'd' is written to the output stream
+     * - The keys of the map are sorted and for each key, the key and its value
+     * are encoded (using this class's encode method) and written to the output
+     * stream
+     * - The type byte 'e' is written to the output stream
+     * 
      * @param data the Map to encode
-     * @param out the output stream to write the encoded data to
+     * @param out  the output stream to write the encoded data to
      * @return a byte array containing the encoded data
      * @throws IOException
      */
     private byte[] mapencoder(Map<String, Object> data, ByteArrayOutputStream out) {
-       out.write('d');
-       List<String> list=new ArrayList<>(data.keySet());
-       Collections.sort(list);
-       for (String key : list) {
-           try {
-               out.write(encode(key));
-               out.write(encode(data.get(key)));
-           } catch (IOException e) {
-               e.printStackTrace();
-           }
-       }
-       out.write('e');
-       return out.toByteArray();
+        out.write('d');
+        List<String> list = new ArrayList<>(data.keySet());
+        Collections.sort(list);
+        for (String key : list) {
+            try {
+                out.write(encode(key));
+                out.write(encode(data.get(key)));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        out.write('e');
+        return out.toByteArray();
     }
+
     /**
      * Encodes the given List into a byte array. The encoding scheme is as follows:
-     *  - The type byte 'l' is written to the output stream
-     *  - Each element of the list is encoded (using this class's encode method) and
-     *    written to the output stream
-     *  - The type byte 'e' is written to the output stream
+     * - The type byte 'l' is written to the output stream
+     * - Each element of the list is encoded (using this class's encode method) and
+     * written to the output stream
+     * - The type byte 'e' is written to the output stream
+     * 
      * @param data the List to encode
-     * @param out the output stream to write the encoded data to
+     * @param out  the output stream to write the encoded data to
      * @return a byte array containing the encoded data
      * @throws IOException
      */
@@ -98,70 +102,84 @@ public class endcode {
     }
 
     /**
-     * Encodes the given byte array into a byte array. The encoding scheme is as follows:
-     *  - The length of the byte array (in bytes) is written to the output stream as a string
-     *  - The type byte ':' is written to the output stream
-     *  - The bytes of the byte array are written to the output stream
+     * Encodes the given byte array into a byte array. The encoding scheme is as
+     * follows:
+     * - The length of the byte array (in bytes) is written to the output stream as
+     * a string
+     * - The type byte ':' is written to the output stream
+     * - The bytes of the byte array are written to the output stream
+     * 
      * @param data the byte array to encode
-     * @param out the output stream to write the encoded data to
+     * @param out  the output stream to write the encoded data to
      * @return a byte array containing the encoded data
      * @throws IOException
      */
     private byte[] bytearrayencoder(byte[] data, ByteArrayOutputStream out) throws IOException {
-        byte[] bytes=data.toString().getBytes(StandardCharsets.UTF_8);
-        out.write(String.valueOf(bytes.length).getBytes(StandardCharsets.UTF_8));
-        out.write(':');
-        out.write(data);
-        return out.toByteArray();
-    }
-
-    /**
-     * Encodes the given integer into a byte array. The encoding scheme is as follows:
-     *  - The type byte 'i' is written to the output stream
-     *  - The string representation of the integer is written to the output stream
-     *  - The type byte 'e' is written to the output stream
-     * @param data the integer to encode
-     * @param out the output stream to write the encoded data to
-     * @return a byte array containing the encoded data
-     * @throws IOException
-     */
-    private byte[] integerencoder(Integer data, ByteArrayOutputStream out) throws IOException {
-       out.write('i');
-       out.write(data.toString().getBytes(StandardCharsets.UTF_8));
-       out.write('e');
-       return out.toByteArray();
-    }
-
-    /**
-     * Encodes the given string into a byte array. The encoding scheme is as follows:
-     *  - The length of the string (in bytes) is written to the output stream as a string
-     *  - The type byte ':' is written to the output stream
-     *  - The bytes of the string are written to the output stream
-     * @param data the string to encode
-     * @param out the output stream to write the encoded data to
-     * @return a byte array containing the encoded data
-     * @throws IOException
-     */
-
-    private byte[] stringencoder(String data, ByteArrayOutputStream out) throws IOException {
-        byte[] bytes=data.getBytes(StandardCharsets.UTF_8);
+        byte[] bytes = data.toString().getBytes(StandardCharsets.UTF_8);
         out.write(String.valueOf(bytes.length).getBytes(StandardCharsets.UTF_8));
         out.write(':');
         out.write(bytes);
         return out.toByteArray();
     }
+
+    /**
+     * Encodes the given integer into a byte array. The encoding scheme is as
+     * follows:
+     * - The type byte 'i' is written to the output stream
+     * - The string representation of the integer is written to the output stream
+     * - The type byte 'e' is written to the output stream
+     * 
+     * @param data the integer to encode
+     * @param out  the output stream to write the encoded data to
+     * @return a byte array containing the encoded data
+     * @throws IOException
+     */
+    private byte[] integerencoder(Integer data, ByteArrayOutputStream out) throws IOException {
+        out.write('i');
+        out.write(data.toString().getBytes(StandardCharsets.UTF_8));
+        out.write('e');
+        return out.toByteArray();
+    }
+
+    /**
+     * Encodes the given string into a byte array. The encoding scheme is as
+     * follows:
+     * - The length of the string (in bytes) is written to the output stream as a
+     * string
+     * - The type byte ':' is written to the output stream
+     * - The bytes of the string are written to the output stream
+     * 
+     * @param data the string to encode
+     * @param out  the output stream to write the encoded data to
+     * @return a byte array containing the encoded data
+     * @throws IOException
+     */
+
+    private byte[] stringencoder(String data, ByteArrayOutputStream out) throws IOException {
+        byte[] bytes = data.getBytes(StandardCharsets.UTF_8);
+        out.write(String.valueOf(bytes.length).getBytes(StandardCharsets.UTF_8));
+        out.write(':');
+        out.write(bytes);
+        return out.toByteArray();
+    }
+
     public static void main(String[] args) throws IOException {
         endcode encoder = new endcode();
-        File file = new File("C:\\Users\\Hello\\Downloads\\ttettyh.txt");
 
-        // Read file content as byte array
-        byte[] fileContent = Files.readAllBytes(file.toPath());
+        Map<String, Object> map= new HashMap<>();
+        map.put("name", "Ubuntu ISO");
+        map.put("info_hash", new byte[] {
+                (byte) 0xDE, (byte) 0xAD, (byte) 0xBE, (byte) 0xEF, (byte) 0xFE,
+                (byte) 0xED, (byte) 0xFA, (byte) 0xCE, (byte) 0xBA, (byte) 0xAD,
+                (byte) 0xF0, (byte) 0x0D, (byte) 0x12, (byte) 0x34, (byte) 0x56,
+                (byte) 0x78, (byte) 0x9A, (byte) 0xBC, (byte) 0xDE, (byte) 0xFF
+        });
 
         // Encode the file content, not the file path
-        byte[] encoded = encoder.encode(fileContent);
-
-        // Print encoded content as a UTF-8 string
+        byte[] encoded = encoder.encode(map);
         System.out.println(new String(encoded, StandardCharsets.UTF_8));
-
+        // System.out.println(new String(encoded, StandardCharsets.UTF_8));
+        decode decode = new decode(encoded);
+        System.out.println(decode.Decode());
     }
 }

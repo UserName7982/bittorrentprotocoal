@@ -43,6 +43,14 @@ public class decode {
         }
     }
 
+    /**
+     * Decodes a string from the current position of the byte array. The decoding
+     * scheme is as follows:
+     *  - The length of the string is read from the byte array as a decimal
+     *    number, followed by a colon.
+     *  - The string is read from the byte array with the given length.
+     * @return the decoded string
+     */
     private String StringDecoder() {
         int colonPos = index;
         while (data[colonPos] != ':') {
@@ -55,12 +63,28 @@ public class decode {
         return str;
     }
 
+    /**
+     * Decodes a map from the current position of the byte array. The decoding
+     * scheme is as follows:
+     *  - The type byte 'd' is read from the byte array.
+     *  - The keys of the map are decoded as strings until the type byte 'e' is
+     *    encountered.
+     *  - For each key, the value is decoded recursively using this class's Decode
+     *    method.
+     *  - The type byte 'e' is read from the byte array, marking the end of the map.
+     * @return the decoded map
+     */
     private Map<String, ?> MapDecoder() {
         Map<String, Object> map = new HashMap<>();
         index++;
         while (data[index] != 'e') {
             String key = StringDecoder();
-            map.put(key, Decode());
+            if (key.equals("pieces") || key.equals("info_hash") || key.equals("peer_id")) {
+                System.out.println(true);
+                map.put(key, ByteStringDecoder());
+            }else{
+                map.put(key, Decode());
+            }
         }
         index++;
         return map;
@@ -86,4 +110,38 @@ public class decode {
         index=epos+1;
         return integer;
     }
+    private byte[] ByteStringDecoder() {
+        int colonPos = index;
+    
+        // Ensure we do not go out of bounds
+        while (colonPos < data.length && data[colonPos] != ':') {
+            colonPos++;
+        }
+    
+        // If colon not found or index exceeds array bounds
+        if (colonPos >= data.length) {
+            throw new RuntimeException("Colon not found while decoding byte string");
+        }
+    
+        // Extract and validate length string
+        String lengthStr = new String(data, index, colonPos - index, StandardCharsets.UTF_8);
+    
+        int length;
+        try {
+            length = Integer.parseInt(lengthStr);
+        } catch (NumberFormatException e) {
+            throw new RuntimeException("Invalid length for byte string: " + lengthStr, e);
+        }
+        index = colonPos + 1;
+        // Check bounds before copying
+        if (index + length > data.length) {
+            throw new RuntimeException("Byte string length exceeds data bounds");
+        }
+    
+        byte[] result = new byte[length];
+        System.arraycopy(data, index, result, 0, length);
+        index += length;
+        return result;
+    }
+    
 }
