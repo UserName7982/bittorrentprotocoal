@@ -82,7 +82,6 @@ public class decode {
         while (data[index] != 'e') {
             String key = StringDecoder();
             if (key.equals("pieces") || key.equals("info_hash") || key.equals("peer_id")) {
-                System.out.println(true);
                 map.put(key, ByteStringDecoder());
             } else {
                 map.put(key, Decode());

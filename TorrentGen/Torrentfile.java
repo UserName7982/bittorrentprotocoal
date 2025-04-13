@@ -1,6 +1,15 @@
 package TorrentGen;
+
+import java.io.BufferedInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -8,38 +17,49 @@ import java.util.List;
 import java.util.Map;
 import java.util.Stack;
 
-public class Torrentfile {
+import DecodingFile.decode;
+import EncodingFile.endcode;
 
-    public void TorrentFile() {
-        File file = new File("C:\\Users\\Hello\\OneDrive\\Desktop\\Advanced java");
-       
+public class Torrentfile {
+    private static final int DEFAULT_PIECE_LENGTH = 262144; // 256KB
+
+    public void TorrentFile() throws NoSuchAlgorithmException, IOException {
+        File file = new File("C:\\Users\\Hello\\OneDrive\\Desktop\\Advanced java\\ob.txt");
+
         HashMap<String, Object> torrent = new HashMap<>();
         torrent.put("announcer", "http://bttracker.debian.org:6969/announce");
-        torrent.put("creation date", System.currentTimeMillis() / 1000L);
+        // torrent.put("creation date", System.currentTimeMillis() / 1000L);
         torrent.put("created by", "TorrentGen");
         torrent.put("encoding in", "UTF-8");
 
         HashMap<String, Object> info = new HashMap<>();
         info.put("name", file.getName());
-        
-        if(!file.isDirectory()){
-            System.out.println("notDirectory");
+
+        if (!file.isDirectory()) {
             info.put("length", file.length());
             info.put("piece length", 256 * 1024);
-            
-        }else{
-            System.out.println("Directory");
+            info.put("pieces", singlehashfile(file));
+        } else {
             List<Map<String, Object>> files = new ArrayList<>();
             List<File> filesList = ListFilesRecursively(file);
             for (File f : filesList) {
                 HashMap<String, Object> fileMap = new HashMap<>();
                 fileMap.put("path", GetRelativePath(file, f));
-                fileMap.put("length", f.length());
+                if (f!=null) {
+                    fileMap.put("length", f.length());
+                }
                 files.add(fileMap);
             }
             info.put("files", files);
+            info.put("pieces", generatehashpieces(filesList));
         }
         torrent.put("info", info);
+        endcode encoder = new endcode();
+        byte[] encoded = encoder.encode(torrent);
+        System.out.println(new String(encoded, StandardCharsets.UTF_8));    
+        decode decode = new decode(encoded);
+        System.out.println(decode.Decode());
+        System.out.println(torrent);
     }
 
     private Object GetRelativePath(File root, File file) {
@@ -57,27 +77,103 @@ public class Torrentfile {
         return pathList;
     }
 
-    private List<File> ListFilesRecursively(File file) {
-        Stack<File> queue = new Stack<>();
-        queue.add(file);
-        List<File> listFiles = new ArrayList<>();
-        while (!queue.isEmpty()) {
-            File currentFile = queue.pop();
-            if (currentFile.isDirectory()) {
-                if (currentFile.listFiles() != null) {
-                    File[] files = currentFile.listFiles();
-                    Arrays.sort(files, (a, b) -> a.getName().compareTo(b.getName()));
-                    for (int i = files.length - 1; i >= 0; i--) {
-                        queue.add(files[i]);
-                    }
+   private List<File> ListFilesRecursively(File file) throws IOException {
+    Stack<File> queue = new Stack<>();
+    queue.add(file);
+    List<File> listFiles = new ArrayList<>();
+    
+    while (!queue.isEmpty()) {
+        File currentFile = queue.pop();
+        if (currentFile.isDirectory()) {
+            File[] children = currentFile.listFiles();
+            if (children != null) {
+                // Sort files lexicographically
+                Arrays.sort(children, (a, b) -> 
+                    a.getName().compareTo(b.getName())
+                );
+                // Add to stack in reverse order for depth-first search
+                for (int i = children.length - 1; i >= 0; i--) {
+                    queue.add(children[i]);
                 }
             } else {
-                listFiles.add(currentFile);
+                System.err.println("Skipping unreadable directory: " + currentFile);
+            }
+        } else {
+            listFiles.add(currentFile);
+        }
+    }
+    return listFiles;
+}
+    public byte[] singlehashfile(File file) throws NoSuchAlgorithmException, IOException {
+        MessageDigest md = MessageDigest.getInstance("SHA-1");
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try (InputStream inputStream = new BufferedInputStream(new FileInputStream(file))) {
+            byte[] buffer = new byte[DEFAULT_PIECE_LENGTH];
+            int bytepostion = 0;
+            int byteread = 0;
+            while ((byteread = inputStream.read(buffer, bytepostion, buffer.length - bytepostion)) != -1) {
+                bytepostion += byteread;
+                if (bytepostion == buffer.length) {
+                    md.update(buffer, 0, bytepostion);
+                    baos.write(md.digest());
+                    md.reset();
+                    bytepostion = 0;
+                }
+            }
+            if (bytepostion > 0) {
+                md.update(buffer, 0, bytepostion);
+                baos.write(md.digest());
             }
         }
-        return listFiles;
+        return baos.toByteArray();
     }
-    public static void main(String[] args) {
+    
+    public byte[] generatehashpieces(List<File> files) throws NoSuchAlgorithmException, IOException {
+        MessageDigest md = MessageDigest.getInstance("SHA-1");
+        int bytepostion = 0;
+        byte[] buffer = new byte[DEFAULT_PIECE_LENGTH];
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    
+        for (File f : files) {
+            try (InputStream inputStream = new BufferedInputStream(new FileInputStream(f))) {
+                int byteread = 0;
+                while ((byteread = inputStream.read(buffer, bytepostion, buffer.length - bytepostion)) != -1) {
+                    bytepostion += byteread;
+                    if (bytepostion == buffer.length) {
+
+                        md.update(buffer, 0, bytepostion);
+                        baos.write(md.digest());  // <== FIXED: digest() with no arguments
+                        md.reset();
+                        bytepostion = 0;
+                    }
+                }
+            } catch (IOException e) {
+                throw new IOException("Failed to read file: " + f.getPath(), e);
+            }
+        }
+    
+        if (bytepostion > 0) {
+            md.update(buffer, 0, bytepostion);
+            try {
+                baos.write(md.digest());  // <== FIXED
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    
+        return baos.toByteArray();
+    }
+    
+    //     private List<File> getSortedFiles(File directory) throws IOException {
+    //     List<File> files = new ArrayList<>();
+    //     Files.walk(directory.toPath())
+    //          .filter(p -> !Files.isDirectory(p))
+    //          .sorted()
+    //          .forEach(p -> files.add(p.toFile()));
+    //     return files;
+    // }
+
+    public static void main(String[] args) throws NoSuchAlgorithmException, IOException {
         new Torrentfile().TorrentFile();
     }
 }

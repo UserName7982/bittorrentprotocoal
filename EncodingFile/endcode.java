@@ -38,15 +38,18 @@ public class endcode {
 
         else if (data instanceof String) {
             return stringencoder((String) data, out);
-        } else if (data instanceof Integer) {
-            return integerencoder((Integer) data, out);
+        }else if (data instanceof Long) {
+            return integerencoder(((Long) data).intValue(), out);
         } else if (data instanceof byte[]) {
             return bytearrayencoder((byte[]) data, out);
         } else if (data instanceof List) {
             return listencoder((List<Object>) data, out);
         } else if (data instanceof Map) {
             return mapencoder((Map<String, Object>) data, out);
+        }else if (data instanceof Integer) {
+            return integerencoder((Integer) data, out);
         }
+        System.out.println("Unsupported data type: " + data.getClass().getName());
         return null;
     }
 
