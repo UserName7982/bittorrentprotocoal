@@ -48,9 +48,9 @@ public class endcode {
             return mapencoder((Map<String, Object>) data, out);
         }else if (data instanceof Integer) {
             return integerencoder((Integer) data, out);
+        }else{
+            throw new IOException("Unsupported data type Found", new Throwable());
         }
-        System.out.println("Unsupported data type: " + data.getClass().getName());
-        return null;
     }
 
     /**

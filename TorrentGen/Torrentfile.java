@@ -4,9 +4,9 @@ import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -23,14 +23,27 @@ import EncodingFile.endcode;
 public class Torrentfile {
     private static final int DEFAULT_PIECE_LENGTH = 262144; // 256KB
 
+    /**
+     * Generates a torrent file from a given file or directory. The file's path
+     * and length are stored in the torrent file, and the file is broken up into
+     * pieces of a given length. For each piece, a SHA-1 hash is generated and
+     * stored in the torrent file. If the given file is a directory, the
+     * directory's contents are recursively searched for files to include in the
+     * torrent file.
+     *
+     * @throws NoSuchAlgorithmException
+     *             if the SHA-1 algorithm is not available
+     * @throws IOException
+     *             if an I/O error occurs while generating the torrent file
+     */
     public void TorrentFile() throws NoSuchAlgorithmException, IOException {
         File file = new File("C:\\Users\\Hello\\OneDrive\\Desktop\\Advanced java\\ob.txt");
 
         HashMap<String, Object> torrent = new HashMap<>();
-        torrent.put("announcer", "http://bttracker.debian.org:6969/announce");
+        torrent.put("announce", "http://bttracker.debian.org:6969/announce");
         // torrent.put("creation date", System.currentTimeMillis() / 1000L);
         torrent.put("created by", "TorrentGen");
-        torrent.put("encoding in", "UTF-8");
+        torrent.put("encoding", "UTF-8");
 
         HashMap<String, Object> info = new HashMap<>();
         info.put("name", file.getName());
@@ -56,11 +69,26 @@ public class Torrentfile {
         torrent.put("info", info);
         endcode encoder = new endcode();
         byte[] encoded = encoder.encode(torrent);
-        System.out.println(new String(encoded, StandardCharsets.UTF_8));    
+        try (FileOutputStream fileOutputStream = new FileOutputStream(file.getName()+".torrent")) {
+            fileOutputStream.write(encoded);
+            fileOutputStream.close();
+        }catch (IOException e) {
+            Throwable t = new Throwable("Failed to write torrent file");
+            t.printStackTrace();
+        }
         decode decode = new decode(encoded);
-        System.out.println(decode.Decode());
-        System.out.println(torrent);
+        // System.out.println(decode.Decode());
+        // System.out.println(torrent);
     }
+
+    /**
+     * Computes the relative path from a root directory to a given file.
+     * If the file is not a descendant of the root directory, an error is printed.
+     * 
+     * @param root the root directory from which the relative path is calculated
+     * @param file the file for which the relative path is needed
+     * @return a List of Strings representing the relative path components
+     */
 
     private Object GetRelativePath(File root, File file) {
         Path basepath = root.toPath().toAbsolutePath().normalize();
@@ -124,6 +152,8 @@ public class Torrentfile {
                 md.update(buffer, 0, bytepostion);
                 baos.write(md.digest());
             }
+        }catch (IOException e) {
+            throw new IOException("Failed to read file: " + file.getPath(), e.getCause());
         }
         return baos.toByteArray();
     }
@@ -148,7 +178,7 @@ public class Torrentfile {
                     }
                 }
             } catch (IOException e) {
-                throw new IOException("Failed to read file: " + f.getPath(), e);
+                throw new IOException("Failed to read file: " + f.getPath(), e.getCause());
             }
         }
     
