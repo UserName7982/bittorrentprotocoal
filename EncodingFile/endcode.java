@@ -5,11 +5,9 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
+// import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import DecodingFile.decode;
 
 public class endcode {
 
@@ -165,24 +163,23 @@ public class endcode {
         out.write(bytes);
         return out.toByteArray();
     }
+    // public static void main(String[] args) throws IOException {
+    //     endcode encoder = new endcode();
 
-    public static void main(String[] args) throws IOException {
-        endcode encoder = new endcode();
+    //     Map<String, Object> map= new HashMap<>();
+    //     map.put("name", "Ubuntu ISO");
+    //     map.put("info_hash", new byte[] {
+    //             (byte) 0xDE, (byte) 0xAD, (byte) 0xBE, (byte) 0xEF, (byte) 0xFE,
+    //             (byte) 0xED, (byte) 0xFA, (byte) 0xCE, (byte) 0xBA, (byte) 0xAD,
+    //             (byte) 0xF0, (byte) 0x0D, (byte) 0x12, (byte) 0x34, (byte) 0x56,
+    //             (byte) 0x78, (byte) 0x9A, (byte) 0xBC, (byte) 0xDE, (byte) 0xFF
+    //     });
 
-        Map<String, Object> map= new HashMap<>();
-        map.put("name", "Ubuntu ISO");
-        map.put("info_hash", new byte[] {
-                (byte) 0xDE, (byte) 0xAD, (byte) 0xBE, (byte) 0xEF, (byte) 0xFE,
-                (byte) 0xED, (byte) 0xFA, (byte) 0xCE, (byte) 0xBA, (byte) 0xAD,
-                (byte) 0xF0, (byte) 0x0D, (byte) 0x12, (byte) 0x34, (byte) 0x56,
-                (byte) 0x78, (byte) 0x9A, (byte) 0xBC, (byte) 0xDE, (byte) 0xFF
-        });
-
-        // Encode the file content, not the file path
-        byte[] encoded = encoder.encode(map);
-        System.out.println(new String(encoded, StandardCharsets.UTF_8));
-        // System.out.println(new String(encoded, StandardCharsets.UTF_8));
-        decode decode = new decode(encoded);
-        System.out.println(decode.Decode());
-    }
+    //     // Encode the file content, not the file path
+    //     byte[] encoded = encoder.encode(map);
+    //     System.out.println(new String(encoded, StandardCharsets.UTF_8));
+    //     // System.out.println(new String(encoded, StandardCharsets.UTF_8));
+    //     decode decode = new decode(encoded);
+    //     System.out.println(decode.Decode());
+    // }
 }
