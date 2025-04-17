@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Stack;
 
+import DecodingFile.decode;
 // import DecodingFile.decode;
 import EncodingFile.endcode;
 
@@ -38,7 +39,7 @@ public class Torrentfile {
      *                                  torrent file
      */
     public void TorrentFile() throws NoSuchAlgorithmException, IOException {
-        File file = new File("C:\\Users\\Hello\\OneDrive\\Desktop\\Advanced java\\ob.txt");
+        File file = new File("C:\\Users\\Hello\\Desktop\\Bencoding");
 
         HashMap<String, Object> torrent = new HashMap<>();
         torrent.put("announce", "http://bttracker.debian.org:6969/announce");
@@ -68,6 +69,7 @@ public class Torrentfile {
             info.put("pieces", generatehashpieces(filesList));
         }
         torrent.put("info", info);
+        
         endcode encoder = new endcode();
         byte[] encoded = encoder.encode(torrent);
         try (FileOutputStream fileOutputStream = new FileOutputStream(file.getName() + ".torrent")) {
@@ -77,9 +79,9 @@ public class Torrentfile {
             Throwable t = new Throwable("Failed to write torrent file");
             t.printStackTrace();
         }
-        // decode decode = new decode(encoded);
-        // // System.out.println(decode.Decode());
-        // // System.out.println(torrent);
+        decode decode = new decode(encoded);
+        System.out.println(decode.Decode());
+        System.out.println(torrent);
     }
 
     /**
@@ -105,6 +107,14 @@ public class Torrentfile {
         }
         return pathList;
     }
+    /*for seeing bytes hashes */
+    // public static String bytesToHex(byte[] bytes) {
+    //     StringBuilder sb = new StringBuilder();
+    //     for (byte b : bytes) {
+    //         sb.append(String.format("%02x", b));
+    //     }
+    //     return sb.toString();
+    // }
 
     private List<File> ListFilesRecursively(File file) throws IOException {
         Stack<File> queue = new Stack<>();
@@ -170,7 +180,6 @@ public class Torrentfile {
                 while ((byteread = inputStream.read(buffer, bytepostion, buffer.length - bytepostion)) != -1) {
                     bytepostion += byteread;
                     if (bytepostion == buffer.length) {
-
                         md.update(buffer, 0, bytepostion);
                         baos.write(md.digest()); // <== FIXED: digest() with no arguments
                         md.reset();
