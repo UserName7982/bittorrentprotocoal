@@ -1,0 +1,6 @@
+{
+    "java.project.referencedLibraries": [
+        "lib/**/*.jar",
+        "c:\\Users\\Hello\\Downloads\\nanohttpd-2.3.1.jar\\nanohttpd-2.3.1.jar"
+    ]
+}

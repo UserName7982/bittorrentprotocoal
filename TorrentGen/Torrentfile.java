@@ -17,7 +17,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Stack;
 
-import DecodingFile.decode;
 // import DecodingFile.decode;
 import EncodingFile.endcode;
 
@@ -39,7 +38,7 @@ public class Torrentfile {
      *                                  torrent file
      */
     public void TorrentFile() throws NoSuchAlgorithmException, IOException {
-        File file = new File("C:\\Users\\Hello\\Desktop\\Bencoding");
+        File file = new File("C:\\Users\\Hello\\OneDrive\\Desktop\\chat_app");
 
         HashMap<String, Object> torrent = new HashMap<>();
         torrent.put("announce", "http://bttracker.debian.org:6969/announce");
@@ -79,9 +78,9 @@ public class Torrentfile {
             Throwable t = new Throwable("Failed to write torrent file");
             t.printStackTrace();
         }
-        decode decode = new decode(encoded);
-        System.out.println(decode.Decode());
-        System.out.println(torrent);
+        // decode decode = new decode(encoded);
+        // System.out.println(decode.Decode());
+        // System.out.println(torrent);
     }
 
     /**
