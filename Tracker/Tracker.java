@@ -30,6 +30,12 @@ public class Tracker extends NanoHTTPD {
         executorService.scheduleAtFixedRate(this::checkInactivePeers, 1, 1, TimeUnit.MINUTES);
     }
 
+    /**
+     * Handles an incoming HTTP request.
+     *
+     * @param session the incoming HTTP request
+     * @return the response to the request
+     */
     public Response serve(IHTTPSession session) {
         if ("/announce".equals(session.getUri())) {
             Map<String, String> params = session.getParms();
@@ -41,6 +47,30 @@ public class Tracker extends NanoHTTPD {
         }
         return newFixedLengthResponse(Response.Status.NOT_FOUND, "text/plain", "Not Found");
     }
+
+    /**
+     * Handles the announce request from a peer. This method processes the peer's
+     * parameters, updates the tracker's list of peers, and constructs a response
+     * based on the request type and parameters.
+     *
+     * The parameters include:
+     * - "info_hash": the info hash of the torrent
+     * - "peer_id": the unique identifier of the peer
+     * - "port": the port number on which the peer is listening
+     * - "left": the number of bytes the peer still has to download
+     * - "event": the event type (e.g., "started", "stopped", "completed")
+     * - "ip": the IP address of the peer
+     * - "compact": whether the response should be in a compact format
+     *
+     * The method updates the list of peers by adding or removing peers based on
+     * the event, and increments or decrements the global seeder and leecher
+     * counters accordingly. The response contains either a compact byte array or
+     * a list of peer information, depending on the "compact" parameter.
+     *
+     * @param params the map of parameters from the announce request
+     * @return a response object containing the encoded peers list or an error
+     * @throws IOException if an I/O error occurs during processing
+     */
 
     private Response AnnounceResponse(Map<String, String> params) throws IOException {
         String info_hash = params.get("info_hash");
@@ -95,6 +125,15 @@ public class Tracker extends NanoHTTPD {
         return newFixedLengthResponse(Response.Status.NOT_FOUND, "text/plain", "Not Found");
     }
 
+    /**
+     * Builds a response object from the given map of data. The response body is
+     * encoded using the bencoding scheme and the response is given a content type
+     * of text/plain.
+     * 
+     * @param map the map of data to encode and return in the response body
+     * @return a response object containing the encoded data in the response body
+     * @throws IOException if an I/O error occurs while encoding the data
+     */
     public Response buildResponse(Map<String, Object> map) throws IOException {
         endcode encoder = new endcode();
         try {
