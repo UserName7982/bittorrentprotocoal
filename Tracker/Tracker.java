@@ -3,13 +3,13 @@ package Tracker;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import EncodingFile.endcode;
@@ -28,7 +28,7 @@ public class Tracker extends NanoHTTPD {
     }
 
     public Response serve(IHTTPSession session) {
-        if ("/announence".equals(session.getUri())) {
+        if ("/announce".equals(session.getUri())) {
             Map<String, String> params = session.getParms();
             try {
                 return AnnounceResponse(params);
@@ -43,14 +43,16 @@ public class Tracker extends NanoHTTPD {
         String info_hash = params.get("info_hash");
         String peer_id = params.get("peer_id");
         String port = params.get("port");
-        String uploaded = params.get("uploaded");
-        String downloaded = params.get("downloaded");
+        // String uploaded = params.get("uploaded");
+        // String downloaded = params.get("downloaded");
         String left = params.get("left");
         String event = params.get("event");
         String ip = params.get("ip");
-        String key = params.get("key");
         String compact = params.get("compact");
-        boolean isSeeder = "0".equals(left);
+        boolean isSeeder = false;
+        if ("0".equals(left)) {
+            isSeeder =true;
+        }
         if ("stopped".equals(event)) {
             boolean removed = peersList.get(info_hash).removeIf(p -> p.peer_id.equals(peer_id));
             if (removed) {
@@ -61,7 +63,7 @@ public class Tracker extends NanoHTTPD {
             }
         }
         boolean b = peersList.computeIfAbsent(info_hash, k -> ConcurrentHashMap.newKeySet())
-                .add(new Peer(ip, Integer.parseInt(port), peer_id));
+                .add(new Peer(ip, Integer.parseInt(port), peer_id, isSeeder));
         if (b) {
             if (isSeeder)
                 seeders.incrementAndGet();
@@ -76,17 +78,28 @@ public class Tracker extends NanoHTTPD {
             seeders.incrementAndGet();
         }
         endcode encoder = new endcode();
+        Map<String, Object> map = new ConcurrentHashMap<>();
+        map.put("interval", ANNOUNCER_TIMER / 1000);
         if (compact.equals("1")) {
-            Map<String, Object> map = new ConcurrentHashMap<>();
             try {
                 map.put("peers", getcompact(info_hash));
-                map.put("interval", ANNOUNCER_TIMER/1000);
                 byte[] bytes = encoder.encode(map);
                 return newFixedLengthResponse(Response.Status.OK, "text/plain",
                         new String(bytes.toString()));
             } catch (IOException e) {
                 e.printStackTrace();
                 Throwable throwable = new Throwable("Getting a problem in getcompact");
+                throwable.printStackTrace();
+            }
+        } else {
+            try {
+                map.put("peers", getpeers(info_hash));
+                byte[] bytes = encoder.encode(map);
+                return newFixedLengthResponse(Response.Status.OK, "text/plain",
+                        new String(bytes.toString()));
+            } catch (IOException e) {
+                e.printStackTrace();
+                Throwable throwable = new Throwable("Getting a problem in getpeers");
                 throwable.printStackTrace();
             }
         }
@@ -104,14 +117,42 @@ public class Tracker extends NanoHTTPD {
         return bOutputStream.toByteArray();
     }
 
-    public void checkInactivePeers() {
-        AtomicBoolean temp = new AtomicBoolean(false);
-        peersList.forEach((info_hash, peers) -> temp.set(
-                peers.removeIf(
-                        (Peer peer) -> System.currentTimeMillis() - peer.announencetimer.get() > ANNOUNCER_TIMER)));
-        if (temp.get()) {
-            leechars.decrementAndGet();
+    public List<Map<String, Object>> getpeers(String info_hash) throws IOException {
+        Set<Peer> peers = peersList.getOrDefault(info_hash, ConcurrentHashMap.newKeySet());
+        List<Map<String, Object>> list = new java.util.ArrayList<>();
+        for (Peer peer : peers) {
+            Map<String, Object> map = new ConcurrentHashMap<>();
+            map.put("ip", peer.ip);
+            map.put("port", peer.port);
+            map.put("peer_id", peer.peer_id);
+            list.add(map);
         }
+        return list;
+    }
+
+    public void checkInactivePeers() {
+        peersList.forEach((infoHash, peers) -> {
+            AtomicInteger seedersRemoved = new AtomicInteger(0);
+            AtomicInteger leechersRemoved = new AtomicInteger(0);
+
+            // Thread-safe removal of inactive peers + count tracking
+            peers.removeIf(peer -> {
+                boolean isInactive = System.currentTimeMillis() - peer.announencetimer.get() > ANNOUNCER_TIMER;
+                if (isInactive) {
+                    if (peer.isSeeder) { // Track seeder/leecher status
+                        seedersRemoved.incrementAndGet();
+                    } else {
+                        leechersRemoved.incrementAndGet();
+                    }
+                    return true;
+                }
+                return false;
+            });
+
+            // Atomically update global counters
+            seeders.addAndGet(-seedersRemoved.get());
+            leechars.addAndGet(-leechersRemoved.get());
+        });
     }
 
     public class Peer {
@@ -120,11 +161,13 @@ public class Tracker extends NanoHTTPD {
         private int port;
         private String peer_id;
         private AtomicLong announencetimer = new AtomicLong();
+        private final boolean isSeeder;
 
-        public Peer(String ip, int port, String peer_id) {
+        public Peer(String ip, int port, String peer_id, boolean isSeeder) {
             this.ip = ip;
             this.port = port;
             this.peer_id = peer_id;
+            this.isSeeder = isSeeder;
             Refresh();
         }
 
