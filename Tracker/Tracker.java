@@ -51,10 +51,11 @@ public class Tracker extends NanoHTTPD {
         String compact = params.get("compact");
         boolean isSeeder = false;
         if ("0".equals(left)) {
-            isSeeder =true;
+            isSeeder = true;
         }
         if ("stopped".equals(event)) {
-            boolean removed = peersList.get(info_hash).removeIf(p -> p.peer_id.equals(peer_id));
+            boolean removed = peersList.getOrDefault(info_hash,  ConcurrentHashMap<>().newKeySet()).re
+                    moveIf(p -> p.peer_id.equals(peer_id));
             if (removed) {
                 if (isSeeder)
                     seeders.decrementAndGet();
@@ -72,10 +73,6 @@ public class Tracker extends NanoHTTPD {
         }
         if (event.equals("completed")) {
             leechars.decrementAndGet();
-            seeders.incrementAndGet();
-        }
-        if (event.equals("uploaded")) {
-            seeders.incrementAndGet();
         }
         endcode encoder = new endcode();
         Map<String, Object> map = new ConcurrentHashMap<>();
@@ -85,7 +82,7 @@ public class Tracker extends NanoHTTPD {
                 map.put("peers", getcompact(info_hash));
                 byte[] bytes = encoder.encode(map);
                 return newFixedLengthResponse(Response.Status.OK, "text/plain",
-                        new String(bytes.toString()));
+                        new String(bytes.toString(),StandardCharsets.ISO_8859_1));
             } catch (IOException e) {
                 e.printStackTrace();
                 Throwable throwable = new Throwable("Getting a problem in getcompact");
@@ -96,7 +93,7 @@ public class Tracker extends NanoHTTPD {
                 map.put("peers", getpeers(info_hash));
                 byte[] bytes = encoder.encode(map);
                 return newFixedLengthResponse(Response.Status.OK, "text/plain",
-                        new String(bytes.toString()));
+                        new String(bytes.toString(),StandardCharsets.ISO_8859_1));
             } catch (IOException e) {
                 e.printStackTrace();
                 Throwable throwable = new Throwable("Getting a problem in getpeers");
