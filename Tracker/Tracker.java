@@ -1,5 +1,8 @@
 package Tracker;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -27,12 +30,16 @@ public class Tracker extends NanoHTTPD {
     public Response serve(IHTTPSession session) {
         if ("/announence".equals(session.getUri())) {
             Map<String, String> params = session.getParms();
-            return AnnounceResponse(params);
+            try {
+                return AnnounceResponse(params);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
         return newFixedLengthResponse(Response.Status.NOT_FOUND, "text/plain", "Not Found");
     }
 
-    private Response AnnounceResponse(Map<String, String> params) {
+    private Response AnnounceResponse(Map<String, String> params) throws IOException {
         String info_hash = params.get("info_hash");
         String peer_id = params.get("peer_id");
         String port = params.get("port");
@@ -69,8 +76,32 @@ public class Tracker extends NanoHTTPD {
             seeders.incrementAndGet();
         }
         endcode encoder = new endcode();
+        if (compact.equals("1")) {
+            Map<String, Object> map = new ConcurrentHashMap<>();
+            try {
+                map.put("peers", getcompact(info_hash));
+                map.put("interval", ANNOUNCER_TIMER/1000);
+                byte[] bytes = encoder.encode(map);
+                return newFixedLengthResponse(Response.Status.OK, "text/plain",
+                        new String(bytes.toString()));
+            } catch (IOException e) {
+                e.printStackTrace();
+                Throwable throwable = new Throwable("Getting a problem in getcompact");
+                throwable.printStackTrace();
+            }
+        }
+        return newFixedLengthResponse(Response.Status.NOT_FOUND, "text/plain", "Not Found");
+    }
 
-        return newFixedLengthResponse(Response.Status.OK, "text/plain", "Not Found");
+    public byte[] getcompact(String info_hash) throws IOException {
+        Set<Peer> peers = peersList.getOrDefault(info_hash, ConcurrentHashMap.newKeySet());
+        ByteArrayOutputStream bOutputStream = new ByteArrayOutputStream();
+        if (peers != null) {
+            for (Peer peer : peers) {
+                bOutputStream.write(peer.GetCompactBytes());
+            }
+        }
+        return bOutputStream.toByteArray();
     }
 
     public void checkInactivePeers() {
@@ -99,6 +130,16 @@ public class Tracker extends NanoHTTPD {
 
         public void Refresh() {
             announencetimer.set(System.currentTimeMillis());
+        }
+
+        public byte[] GetCompactBytes() {
+            ByteBuffer bb = ByteBuffer.allocate(6);
+            String[] ipStrings = ip.split("\\.");
+            for (String s : ipStrings) {
+                bb.put((byte) Integer.parseInt(s));
+            }
+            bb.putShort((short) port);
+            return bb.array();
         }
     }
 }
