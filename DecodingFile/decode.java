@@ -175,5 +175,4 @@ public class decode {
         index += length;
         return result;
     }
-
 }
