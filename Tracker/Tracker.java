@@ -1,5 +1,6 @@
 package Tracker;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.Inet6Address;
@@ -28,6 +29,18 @@ public class Tracker extends NanoHTTPD {
     public Tracker(int port) {
         super(port);
         executorService.scheduleAtFixedRate(this::checkInactivePeers, 1, 1, TimeUnit.MINUTES);
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            executorService.shutdown();
+            try {
+                if (!executorService.awaitTermination(5, TimeUnit.SECONDS)) {
+                  executorService.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                System.out.println( "shutdown interrupted");
+                e.printStackTrace();
+            }
+          }));
+          
     }
 
     /**
@@ -139,7 +152,7 @@ public class Tracker extends NanoHTTPD {
         try {
             byte[] bytes = encoder.encode(map);
             return newFixedLengthResponse(Response.Status.OK, "text/plain",
-                    new String(bytes.toString()));
+            new ByteArrayInputStream(bytes), bytes.length);
         } catch (NumberFormatException e) {
             return newFixedLengthResponse(Response.Status.INTERNAL_ERROR, "text/plain", "Response error");
         }

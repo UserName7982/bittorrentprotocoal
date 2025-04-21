@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Stack;
 
-// import DecodingFile.decode;
+import DecodingFile.decode;
 import EncodingFile.endcode;
 
 public class Torrentfile {
@@ -78,9 +78,9 @@ public class Torrentfile {
             Throwable t = new Throwable("Failed to write torrent file");
             t.printStackTrace();
         }
-        // decode decode = new decode(encoded);
-        // System.out.println(decode.Decode());
-        // System.out.println(torrent);
+        decode decode = new decode(encoded);
+        System.out.println(decode.Decode());
+        System.out.println(torrent);
     }
 
     /**
@@ -92,7 +92,7 @@ public class Torrentfile {
      * @return a List of Strings representing the relative path components
      */
 
-    private Object GetRelativePath(File root, File file) {
+     private Object GetRelativePath(File root, File file) {
         Path basepath = root.toPath().toAbsolutePath().normalize();
         Path filepath = file.toPath().toAbsolutePath().normalize();
         if (!filepath.startsWith(basepath)) {
@@ -178,6 +178,7 @@ public class Torrentfile {
                 int byteread = 0;
                 while ((byteread = inputStream.read(buffer, bytepostion, buffer.length - bytepostion)) != -1) {
                     bytepostion += byteread;
+                    System.out.println(buffer.length);
                     if (bytepostion == buffer.length) {
                         md.update(buffer, 0, bytepostion);
                         baos.write(md.digest()); // <== FIXED: digest() with no arguments
