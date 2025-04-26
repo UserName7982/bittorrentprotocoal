@@ -28,19 +28,20 @@ public class Tracker extends NanoHTTPD {
 
     public Tracker(int port) {
         super(port);
+        System.out.println("Server started on port " + port);
         executorService.scheduleAtFixedRate(this::checkInactivePeers, 1, 1, TimeUnit.MINUTES);
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            executorService.shutdown();
-            try {
-                if (!executorService.awaitTermination(5, TimeUnit.SECONDS)) {
-                  executorService.shutdownNow();
-                }
-            } catch (InterruptedException e) {
-                System.out.println( "shutdown interrupted");
-                e.printStackTrace();
-            }
-          }));
-          
+        // Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+        // executorService.shutdown();
+        // try {
+        // if (!executorService.awaitTermination(5, TimeUnit.SECONDS)) {
+        // executorService.shutdownNow();
+        // }
+        // } catch (InterruptedException e) {
+        // System.out.println( "shutdown interrupted");
+        // e.printStackTrace();
+        // }
+        // }));
+
     }
 
     /**
@@ -51,7 +52,8 @@ public class Tracker extends NanoHTTPD {
      */
     public Response serve(IHTTPSession session) {
         if ("/announce".equals(session.getUri())) {
-            Map<String, String> params = session.getParms();
+            Map<String,List<String>> params = session.getParameters();
+            System.out.println(params);
             try {
                 return AnnounceResponse(params);
             } catch (IOException e) {
@@ -85,19 +87,20 @@ public class Tracker extends NanoHTTPD {
      * @throws IOException if an I/O error occurs during processing
      */
 
-    private Response AnnounceResponse(Map<String, String> params) throws IOException {
-        String info_hash = params.get("info_hash");
-        String peer_id = params.get("peer_id");
-        String port = params.get("port");
+    private Response AnnounceResponse(Map<String, List<String>> params) throws IOException {
+        String info_hash = params.get("info_hash").get(0);
+        String peer_id = params.get("peer_id").get(0);
+        String port = params.get("port").get(0);
         // String uploaded = params.get("uploaded");
         // String downloaded = params.get("downloaded");
-        String left = params.get("left");
-        String event = params.get("event");
-        String ip = params.get("ip");
-        String compact = params.getOrDefault("compact", "0");
+        String left = params.get("left").get(0);
+        String event = params.get("event").get(0);
+        String ip = params.get("ip").get(0);
+        String compact = "1";
         boolean isSeeder = false;
         int portnumber = 0;
         try {
+            System.out.println(port);
             portnumber = Integer.parseInt(port);
         } catch (NumberFormatException e) {
             return newFixedLengthResponse(Response.Status.INTERNAL_ERROR, "text/plain", "tracker port error");
@@ -128,14 +131,13 @@ public class Tracker extends NanoHTTPD {
         }
         Map<String, Object> map = new ConcurrentHashMap<>();
         map.put("interval", ANNOUNCER_TIMER / 1000);
-        if (compact.equals("1")) {
+        if ( compact!=null&&compact.equals("1")) {
             map.put("peers", getcompact(info_hash));
-            buildResponse(map); 
+            return buildResponse(map);
         } else {
             map.put("peers", getpeers(info_hash));
-            buildResponse(map);
+           return buildResponse(map);
         }
-        return newFixedLengthResponse(Response.Status.NOT_FOUND, "text/plain", "Not Found");
     }
 
     /**
@@ -151,9 +153,11 @@ public class Tracker extends NanoHTTPD {
         endcode encoder = new endcode();
         try {
             byte[] bytes = encoder.encode(map);
+            System.out.println(map);
             return newFixedLengthResponse(Response.Status.OK, "text/plain",
-            new ByteArrayInputStream(bytes), bytes.length);
+                    new ByteArrayInputStream(bytes), bytes.length);
         } catch (NumberFormatException e) {
+            System.out.println("INTERNAL_ERROR");
             return newFixedLengthResponse(Response.Status.INTERNAL_ERROR, "text/plain", "Response error");
         }
     }
@@ -276,6 +280,7 @@ public class Tracker extends NanoHTTPD {
                 if (address instanceof Inet6Address) {
                     bb = ByteBuffer.allocate(18); // 16 bytes IPv6 + 2 bytes port
                 } else {
+                    System.out.println("IPv4");
                     bb = ByteBuffer.allocate(6); // 4 bytes IPv4 + 2 bytes port
                 }
                 bb.put(address.getAddress());
@@ -285,5 +290,10 @@ public class Tracker extends NanoHTTPD {
                 throw new IllegalArgumentException("Invalid IP: " + ip);
             }
         }
+    }
+
+    public static void main(String[] args) throws Exception {
+        Tracker tracker = new Tracker(6969);
+        tracker.start();
     }
 }

@@ -116,10 +116,11 @@ public class endcode {
      * @throws IOException
      */
     private byte[] bytearrayencoder(byte[] data, ByteArrayOutputStream out) throws IOException {
-        byte[] bytes = data.toString().getBytes(StandardCharsets.UTF_8);
+        byte[] bytes = data;
         out.write(String.valueOf(bytes.length).getBytes(StandardCharsets.UTF_8));
+        System.out.println(bytes.length);
         out.write(':');
-        out.write(bytes);
+        out.write(data);
         return out.toByteArray();
     }
 
